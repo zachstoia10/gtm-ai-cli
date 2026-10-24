@@ -42,7 +42,7 @@ export function saveOAuthCredentials({ clientId, access_token, refresh_token, ex
     access_token,
     refresh_token,
     client_id: clientId,
-    expires_at: expires_in ? Date.now() + expires_in * 1000 : null,
+    expires_at: expires_in ? Date.now() + expires_in : null,
   };
   writeFileAtomic(CREDENTIALS_PATH, JSON.stringify(payload));
 }
