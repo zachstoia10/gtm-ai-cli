@@ -1,4 +1,4 @@
-> DEMO COPY - contains an intentional bug for a sales demo. Do not install or use.
+> Demo copy of [Zoominfo/gtm-ai-cli](https://github.com/Zoominfo/gtm-ai-cli), used for a Cognition (Devin) onboarding demo.
 
 # GTM AI CLI
 
