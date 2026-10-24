@@ -83,6 +83,50 @@ describe('getValidCredentials', () => {
   });
 });
 
+describe('token expiry after a refresh', () => {
+  // The token endpoint reports expires_in in seconds (RFC 6749 §5.1).
+  it('records a refreshed token as valid for its full lifetime', async () => {
+    writeCreds();
+    refreshAccessToken.mockResolvedValue({ access_token: 'new-access', refresh_token: 'new-refresh', expires_in: 3600 });
+    const { getValidCredentials, loadCredentials } = await load();
+    await getValidCredentials();
+    const expiresAt = loadCredentials()?.expires_at ?? 0;
+    expect(expiresAt - Date.now()).toBeGreaterThan(HOUR - 60 * 1000);
+    expect(expiresAt - Date.now()).toBeLessThanOrEqual(HOUR);
+  });
+
+  it('does not refresh again on the next command after a refresh', async () => {
+    writeCreds();
+    refreshAccessToken.mockResolvedValue({ access_token: 'new-access', refresh_token: 'new-refresh', expires_in: 3600 });
+    const { getValidCredentials } = await load();
+    await getValidCredentials();
+    expect((await getValidCredentials())?.access_token).toBe('new-access');
+    expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+  });
+
+  // Bulk enrichment in parallel: several commands find the token expired at once, all try to
+  // refresh with the same refresh token, and the server rotates it on first use, so the others
+  // get invalid_grant. They should pick up the session the winner saved, not log the user out.
+  it('keeps parallel commands logged in when the server rotates the refresh token', async () => {
+    writeCreds();
+    let validRefreshToken = 'old-refresh';
+    let calls = 0;
+    refreshAccessToken.mockImplementation((refreshToken: string) => {
+      const n = ++calls;
+      const accepted = refreshToken === validRefreshToken;
+      if (accepted) validRefreshToken = `refresh-${n}`;
+      return new Promise((resolve, reject) => setTimeout(() => accepted
+        ? resolve({ access_token: `access-${n}`, refresh_token: `refresh-${n}`, expires_in: 3600 })
+        : reject(new Error('token refresh failed: invalid_grant')), 10 * n));
+    });
+    const { getValidCredentials } = await load();
+    const results = await Promise.allSettled([getValidCredentials(), getValidCredentials(), getValidCredentials()]);
+    expect(results.map(r => r.status)).toEqual(['fulfilled', 'fulfilled', 'fulfilled']);
+    expect(results.map(r => (r as PromiseFulfilledResult<{ access_token: string }>).value.access_token))
+      .toEqual(['access-1', 'access-1', 'access-1']);
+  });
+});
+
 describe('withSession', () => {
   beforeEach(() => {
     writeCreds({ expires_at: Date.now() + HOUR });
