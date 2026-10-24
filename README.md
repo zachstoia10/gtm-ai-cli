@@ -61,7 +61,7 @@ xattr -d com.apple.quarantine /usr/local/bin/gtm #only required on macOS
 Move-Item .\gtm-windows-x64.exe "$env:USERPROFILE\bin\gtm.exe"
 ```
 
-### From source (Node 18+)
+### From source (Node 20+)
 
 ```shell
 git clone https://github.com/Zoominfo/gtm-ai-cli.git

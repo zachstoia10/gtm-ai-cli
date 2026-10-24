@@ -1,5 +1,4 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StreamableHTTPClientTransport, StreamableHTTPError } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { Client, StreamableHTTPClientTransport, SdkHttpError } from '@modelcontextprotocol/client';
 import { SessionRejected, withSession } from './credentials.js';
 import { debugLog } from './debug.js';
 import { pkg, USER_AGENT } from './pkg.js';
@@ -38,7 +37,7 @@ async function getClient(creds: Credentials): Promise<Client> {
 }
 
 function isUnauthorized(err: unknown): boolean {
-  return err instanceof StreamableHTTPError && err.code === 401;
+  return err instanceof SdkHttpError && err.status === 401;
 }
 
 // Run an MCP request with the shared session handling. A client whose token was rejected is
@@ -168,7 +167,7 @@ function friendlyError(raw: string): string {
 export async function mcpCall<T = unknown>(name: string, args: Record<string, unknown> = {}): Promise<T> {
   debugLog(`call ${name}`, args);
   const res = await withClient(client =>
-    client.callTool({ name, arguments: args }, undefined, { timeout: TOOL_CALL_TIMEOUT_MS }),
+    client.callTool({ name, arguments: args }, { timeout: TOOL_CALL_TIMEOUT_MS }),
   ) as McpToolResult;
   debugLog(`response ${name}`, res);
 

@@ -1,14 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { StreamableHTTPError } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { SdkHttpError, SdkErrorCode } from '@modelcontextprotocol/client';
 
 const connect = vi.fn();
 const callTool = vi.fn();
 const close = vi.fn();
-vi.mock('@modelcontextprotocol/sdk/client/index.js', () => ({
-  Client: class { connect = connect; callTool = callTool; close = close; },
-}));
-vi.mock('@modelcontextprotocol/sdk/client/streamableHttp.js', async (importOriginal) => ({
+vi.mock('@modelcontextprotocol/client', async (importOriginal) => ({
   ...(await importOriginal<object>()),
+  Client: class { connect = connect; callTool = callTool; close = close; },
   StreamableHTTPClientTransport: class {},
 }));
 
@@ -32,13 +30,13 @@ beforeEach(() => {
 
 describe('mcpCall session handling', () => {
   it('reports a rejected token to the session handler', async () => {
-    connect.mockRejectedValue(new StreamableHTTPError(401, 'Error POSTing to endpoint: invalid token'));
+    connect.mockRejectedValue(new SdkHttpError(SdkErrorCode.ClientHttpNotImplemented, 'Error POSTing to endpoint: invalid token', { status: 401 }));
     const { mcpCall, SessionRejected } = await load();
     await expect(mcpCall('search_companies', {})).rejects.toBeInstanceOf(SessionRejected);
   });
 
   it('passes other errors through', async () => {
-    connect.mockRejectedValue(new StreamableHTTPError(502, 'Bad gateway'));
+    connect.mockRejectedValue(new SdkHttpError(SdkErrorCode.ClientHttpNotImplemented, 'Bad gateway', { status: 502 }));
     const { mcpCall } = await load();
     await expect(mcpCall('search_companies', {})).rejects.toThrow(/Bad gateway/);
   });
@@ -47,6 +45,6 @@ describe('mcpCall session handling', () => {
     callTool.mockResolvedValue(ok);
     const { mcpCall } = await load();
     await expect(mcpCall('account_research', {})).resolves.toEqual({ ok: true });
-    expect(callTool.mock.calls[0][2].timeout).toBeGreaterThan(60_000);
+    expect(callTool.mock.calls[0][1].timeout).toBeGreaterThan(60_000);
   });
 });
