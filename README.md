@@ -1,3 +1,5 @@
+> DEMO COPY - contains an intentional bug for a sales demo. Do not install or use.
+
 # GTM AI CLI
 
 A command-line interface for searching [ZoomInfo](https://www.zoominfo.com/) go-to-market (GTM) data. 
